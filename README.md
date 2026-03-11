@@ -13,6 +13,7 @@ https://github.com/miracle-wm-org/miri-plugin/releases/download/nightly/miri_plu
 
 ### Installation
 ```sh
+sudo apt-get install -y libmircore-dev clang libclang-dev
 rustup target add wasm32-wasip1
 ```
 
