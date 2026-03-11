@@ -1,0 +1,12 @@
+[package]
+name = "miri-plugin"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+miracle-plugin-rs = { git = "https://github.com/miracle-wm-org/miracle-wm.git" }
+glam = "0.29"
+serde_json = "1"
