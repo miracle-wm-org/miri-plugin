@@ -5,8 +5,8 @@ use miracle_plugin_rs::{
     input::{InputEventModifiers, KeyboardAction, KeyboardEvent},
     miracle_plugin,
     placement::{FreestylePlacement, Placement, WindowManagementStrategy},
-    plugin::{get_userdata_json, Plugin},
-    window::{DepthLayer, WindowInfo, WindowType},
+    plugin::{Plugin, get_userdata_json},
+    window::{DepthLayer, WindowInfo, WindowState, WindowType},
     workspace::Workspace,
 };
 use std::collections::HashMap;
@@ -144,6 +144,10 @@ impl Plugin for Miri {
             return None;
         }
 
+        if info.state == WindowState::Attached {
+            return None;
+        }
+
         let ws = Self::get_active_workspace()?;
         let ws_id = ws.internal;
         let workspace_info = self.workspaces.entry(ws_id).or_insert(MiriWorkspaceInfo {
@@ -240,7 +244,7 @@ impl Plugin for Miri {
             return false;
         }
 
-        if !event.modifiers.contains(InputEventModifiers::CTRL) {
+        if !event.modifiers.contains(InputEventModifiers::META) {
             return false;
         }
 
