@@ -167,6 +167,8 @@ impl Plugin for Miri {
                 size: Size::new(rect.width, rect.height),
                 transform: Mat4::IDENTITY,
                 alpha: 1.0,
+                movable: false,
+                resizable: false
             },
             ..Default::default()
         })
