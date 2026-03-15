@@ -133,6 +133,8 @@ checksum = "68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a"
 [[package]]
 name = "miracle-plugin"
 version = "0.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cd992de27d50dba155c01b367c35350e5fe3d6b86c35bf03d4f67e8f67b37942"
 dependencies = [
  "bindgen",
  "bitflags",

@@ -7,6 +7,6 @@ edition = "2024"
 crate-type = ["cdylib"]
 
 [dependencies]
-miracle-plugin = { path = "../miracle-wm/miracle-plugin-rs" }
 glam = "0.29"
+miracle-plugin = "0.0.1"
 serde_json = "1"
