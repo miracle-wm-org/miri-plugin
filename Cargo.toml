@@ -7,6 +7,6 @@ edition = "2024"
 crate-type = ["cdylib"]
 
 [dependencies]
-miracle-plugin-rs = { git = "https://github.com/miracle-wm-org/miracle-wm.git" }
+miracle-plugin = { path = "../miracle-wm/miracle-plugin-rs" }
 glam = "0.29"
 serde_json = "1"

@@ -1,15 +1,20 @@
-use glam::Mat4;
-use miracle_plugin_rs::{
+use glam::{Mat4, Vec3};
+use miracle_plugin::{
     animation::{AnimationFrameData, AnimationFrameResult},
     core::{Point, Rect, Rectangle, Size},
     input::{InputEventModifiers, KeyboardAction, KeyboardEvent},
     miracle_plugin,
     placement::{FreestylePlacement, Placement, WindowManagementStrategy},
-    plugin::{Plugin, get_userdata_json},
+    plugin::{
+        Plugin, get_active_workspace, get_userdata_json, managed_windows, queue_custom_animation,
+    },
     window::{DepthLayer, WindowInfo, WindowState, WindowType},
     workspace::Workspace,
 };
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
+
+static ANIMATING: AtomicBool = AtomicBool::new(false);
 
 const WINDOW_WIDTH_FRACTION: f32 = 0.5;
 const DEFAULT_INNER_GAP: i32 = 20;
@@ -17,6 +22,7 @@ const DEFAULT_OUTER_GAP: i32 = 0;
 
 const XKB_KEY_LEFT: u32 = 0xff51;
 const XKB_KEY_RIGHT: u32 = 0xff53;
+const XKB_KEY_A: u32 = 0x0061;
 
 struct Miri {
     /// Per-workspace ordered list of managed Normal windows.
@@ -37,7 +43,7 @@ impl Default for Miri {
 }
 
 struct MiriWorkspaceInfo {
-    windows: Vec<WindowInfo>,
+    windows: Vec<u64>,
     focused_index: usize,
     /// The usable area of the workspace (updated via workspace_area_changed).
     area: Rectangle,
@@ -77,9 +83,16 @@ impl Miri {
 
     /// The rectangle for a window at `index` given the focused window for that workspace.
     /// The focused window is anchored at the workspace's top-left; others are placed side-by-side.
-    fn rect_for_index(area: &Rectangle, index: usize, focused_index: usize, inner_gap: i32, outer_gap: i32) -> Rectangle {
+    fn rect_for_index(
+        area: &Rectangle,
+        index: usize,
+        focused_index: usize,
+        inner_gap: i32,
+        outer_gap: i32,
+    ) -> Rectangle {
         let effective = Self::effective_area(area, outer_gap);
-        let x = effective.x + (index as i32 - focused_index as i32) * Self::stride(&effective, inner_gap);
+        let x = effective.x
+            + (index as i32 - focused_index as i32) * Self::stride(&effective, inner_gap);
         Rectangle {
             x,
             y: effective.y,
@@ -91,7 +104,7 @@ impl Miri {
     /// Find which workspace and index a window belongs to.
     fn find_window(&self, win_info: &WindowInfo) -> Option<(u64, usize)> {
         for (ws_id, info) in &self.workspaces {
-            if let Some(idx) = info.windows.iter().position(|w| w == win_info) {
+            if let Some(idx) = info.windows.iter().position(|w| *w == win_info.id()) {
                 return Some((*ws_id, idx));
             }
         }
@@ -106,30 +119,33 @@ impl Miri {
         if info.windows.is_empty() {
             return;
         }
-        let managed = Self::managed_windows();
+        let managed = managed_windows();
         for (index, stored_info) in info.windows.iter().enumerate() {
             if let Some(pw) = managed.iter().find(|pw| {
                 let wi: &WindowInfo = pw;
-                wi == stored_info
+                wi.id() == *stored_info
             }) {
-                let _ = pw.set_rectangle(Self::rect_for_index(
-                    &info.area,
-                    index,
-                    info.focused_index,
-                    self.inner_gap,
-                    self.outer_gap,
-                ), animate);
+                let _ = pw.set_rectangle(
+                    Self::rect_for_index(
+                        &info.area,
+                        index,
+                        info.focused_index,
+                        self.inner_gap,
+                        self.outer_gap,
+                    ),
+                    animate,
+                );
             }
         }
     }
 
     fn focus_window_at(&self, ws_id: u64, index: usize) {
-        let managed = Self::managed_windows();
+        let managed = managed_windows();
         if let Some(info) = self.workspaces.get(&ws_id) {
             if let Some(target) = info.windows.get(index) {
                 if let Some(pw) = managed.iter().find(|pw| {
                     let wi: &WindowInfo = pw;
-                    wi == target
+                    wi.id() == *target
                 }) {
                     let _ = pw.request_focus();
                 }
@@ -139,7 +155,7 @@ impl Miri {
 }
 
 impl Plugin for Miri {
-    fn place_new_window(&mut self, info: WindowInfo) -> Option<Placement> {
+    fn place_new_window(&mut self, info: &WindowInfo) -> Option<Placement> {
         if info.window_type != WindowType::Normal && info.window_type != WindowType::Freestyle {
             return None;
         }
@@ -148,8 +164,8 @@ impl Plugin for Miri {
             return None;
         }
 
-        let ws = Self::get_active_workspace()?;
-        let ws_id = ws.internal;
+        let ws = get_active_workspace()?;
+        let ws_id = ws.id();
         let workspace_info = self.workspaces.entry(ws_id).or_insert(MiriWorkspaceInfo {
             windows: vec![],
             focused_index: 0,
@@ -157,8 +173,14 @@ impl Plugin for Miri {
         });
         let new_index = workspace_info.windows.len();
         let focused_index = workspace_info.focused_index;
-        let rect = Self::rect_for_index(&workspace_info.area, new_index, focused_index, self.inner_gap, self.outer_gap);
-        workspace_info.windows.push(info);
+        let rect = Self::rect_for_index(
+            &workspace_info.area,
+            new_index,
+            focused_index,
+            self.inner_gap,
+            self.outer_gap,
+        );
+        workspace_info.windows.push(info.id());
 
         // Place at the natural next slot. window_focused will fire immediately after
         // and call relayout() to scroll all windows into their correct positions.
@@ -172,13 +194,13 @@ impl Plugin for Miri {
                 transform: Mat4::IDENTITY,
                 alpha: 1.0,
                 movable: false,
-                resizable: false
+                resizable: false,
             },
             ..Default::default()
         })
     }
 
-    fn window_deleted(&mut self, info: WindowInfo) {
+    fn window_deleted(&mut self, info: &WindowInfo) {
         if let Some((ws_id, idx)) = self.find_window(&info) {
             let ws_info = self.workspaces.get_mut(&ws_id).unwrap();
             ws_info.windows.remove(idx);
@@ -197,7 +219,7 @@ impl Plugin for Miri {
         }
     }
 
-    fn window_focused(&mut self, info: WindowInfo) {
+    fn window_focused(&mut self, info: &WindowInfo) {
         if let Some((ws_id, idx)) = self.find_window(&info) {
             if let Some(ws_info) = self.workspaces.get_mut(&ws_id) {
                 ws_info.focused_index = idx;
@@ -206,9 +228,9 @@ impl Plugin for Miri {
         }
     }
 
-    fn workspace_created(&mut self, workspace: Workspace) {
+    fn workspace_created(&mut self, workspace: &Workspace) {
         self.workspaces
-            .entry(workspace.internal)
+            .entry(workspace.id())
             .or_insert(MiriWorkspaceInfo {
                 windows: vec![],
                 focused_index: 0,
@@ -216,12 +238,12 @@ impl Plugin for Miri {
             });
     }
 
-    fn workspace_removed(&mut self, workspace: Workspace) {
-        self.workspaces.remove(&workspace.internal);
+    fn workspace_removed(&mut self, workspace: &Workspace) {
+        self.workspaces.remove(&workspace.id());
     }
 
-    fn workspace_focused(&mut self, _previous_id: Option<u64>, current: Workspace) {
-        let ws_id = current.internal;
+    fn workspace_focused(&mut self, _previous_id: Option<u64>, current: &Workspace) {
+        let ws_id = current.id();
         if self
             .workspaces
             .get(&ws_id)
@@ -231,8 +253,8 @@ impl Plugin for Miri {
         }
     }
 
-    fn workspace_area_changed(&mut self, workspace: Workspace) {
-        let ws_id = workspace.internal;
+    fn workspace_area_changed(&mut self, workspace: &Workspace) {
+        let ws_id = workspace.id();
         if let Some(info) = self.workspaces.get_mut(&ws_id) {
             info.area = workspace.rectangle;
         }
@@ -248,8 +270,33 @@ impl Plugin for Miri {
             return false;
         }
 
-        let ws_id = match Self::get_active_workspace() {
-            Some(ws) => ws.internal,
+        if !ANIMATING.load(Ordering::Relaxed) && event.keysym == XKB_KEY_A {
+            ANIMATING.store(true, Ordering::Relaxed);
+            if queue_custom_animation(
+                move |_id, _dt, elapsed| {
+                    let t = (elapsed / 5.0).clamp(0.0, 1.0);
+                    // Scale: 1.0 → 0.5 over first half, 0.5 → 1.0 over second half
+                    let scale = if t <= 0.5 { 1.0 - t } else { t };
+                    let transform = Mat4::from_scale(Vec3::splat(scale));
+                    for pw in &managed_windows() {
+                        let _ = pw.set_transform(transform);
+                    }
+
+                    if elapsed >= 5.0 {
+                        ANIMATING.store(false, Ordering::Relaxed);
+                    }
+                },
+                5.0,
+            )
+            .is_none()
+            {
+                ANIMATING.store(false, Ordering::Relaxed);
+            }
+            return true;
+        }
+
+        let ws_id = match get_active_workspace() {
+            Some(ws) => ws.id(),
             None => return false,
         };
 

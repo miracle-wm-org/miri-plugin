@@ -131,9 +131,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a"
 
 [[package]]
-name = "miracle-plugin-rs"
-version = "0.1.0"
-source = "git+https://github.com/miracle-wm-org/miracle-wm.git#303132193d3cda0e24d2f2dc713f8c881bc3e9b6"
+name = "miracle-plugin"
+version = "0.0.1"
 dependencies = [
  "bindgen",
  "bitflags",
@@ -145,7 +144,7 @@ name = "miri-plugin"
 version = "0.1.0"
 dependencies = [
  "glam",
- "miracle-plugin-rs",
+ "miracle-plugin",
  "serde_json",
 ]
 
