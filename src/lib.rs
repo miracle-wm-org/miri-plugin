@@ -1,10 +1,11 @@
 use glam::{Mat4, Vec3};
 use miracle_plugin::{
     animation::{AnimationFrameData, AnimationFrameResult},
+    config::{BorderConfig, Configuration, StartupApp},
     core::{Point, Rect, Rectangle, Size},
     input::{InputEventModifiers, KeyboardAction, KeyboardEvent},
     miracle_plugin,
-    placement::{FreestylePlacement, Placement, WindowManagementStrategy},
+    placement::{FreestylePlacement, Placement},
     plugin::{
         Plugin, get_active_workspace, get_userdata_json, managed_windows, queue_custom_animation,
     },
@@ -184,20 +185,16 @@ impl Plugin for Miri {
 
         // Place at the natural next slot. window_focused will fire immediately after
         // and call relayout() to scroll all windows into their correct positions.
-        Some(Placement {
-            strategy: WindowManagementStrategy::Freestyle,
-            freestyle: FreestylePlacement {
-                top_left: Point::new(rect.x, rect.y),
-                depth_layer: DepthLayer::Application,
-                workspace: None,
-                size: Size::new(rect.width, rect.height),
-                transform: Mat4::IDENTITY,
-                alpha: 1.0,
-                movable: false,
-                resizable: false,
-            },
-            ..Default::default()
-        })
+        Some(Placement::Freestyle(FreestylePlacement {
+            top_left: Point::new(rect.x, rect.y),
+            depth_layer: DepthLayer::Application,
+            workspace: None,
+            size: Size::new(rect.width, rect.height),
+            transform: Mat4::IDENTITY,
+            alpha: 1.0,
+            movable: false,
+            resizable: false,
+        }))
     }
 
     fn window_deleted(&mut self, info: &WindowInfo) {
