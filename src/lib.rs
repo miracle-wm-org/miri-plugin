@@ -1,8 +1,6 @@
 use glam::{Mat4, Vec3};
 use miracle_plugin::{
-    animation::{AnimationFrameData, AnimationFrameResult},
-    config::{BorderConfig, Configuration, StartupApp},
-    core::{Point, Rect, Rectangle, Size},
+    core::{Point, Rectangle, Size},
     input::{InputEventModifiers, KeyboardAction, KeyboardEvent},
     miracle_plugin,
     placement::{FreestylePlacement, Placement},
@@ -315,30 +313,6 @@ impl Plugin for Miri {
             _ => false,
         }
     }
-
-    fn window_open_animation(&mut self, data: &AnimationFrameData) -> Option<AnimationFrameResult> {
-        let progress = (data.runtime_seconds / data.duration_seconds).clamp(0.0, 1.0);
-        let eased = ease_out_cubic(progress);
-
-        let area = Rect {
-            x: data.origin.x + (data.destination.x - data.origin.x) * eased,
-            y: data.origin.y + (data.destination.y - data.origin.y) * eased,
-            width: data.origin.width + (data.destination.width - data.origin.width) * eased,
-            height: data.origin.height + (data.destination.height - data.origin.height) * eased,
-        };
-        let opacity = data.opacity_start + (data.opacity_end - data.opacity_start) * eased;
-
-        Some(AnimationFrameResult {
-            completed: progress >= 1.0,
-            area: Some(area),
-            transform: None,
-            opacity: Some(opacity),
-        })
-    }
 }
 
 miracle_plugin!(Miri);
-
-fn ease_out_cubic(t: f32) -> f32 {
-    1.0 - (1.0 - t).powi(3)
-}

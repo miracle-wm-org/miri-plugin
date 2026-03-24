@@ -8,5 +8,5 @@ crate-type = ["cdylib"]
 
 [dependencies]
 glam = "0.29"
-miracle-plugin = "0.0.1"
+miracle-plugin = { version = "0.0.6" }
 serde_json = "1"
