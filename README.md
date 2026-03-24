@@ -33,4 +33,5 @@ plugins:
  - path: /path/to/miri/target/wasm32-wasip1/release/miri_plugin.wasm
    inner_gap: 50 # Optional
    outer_gap: 5  # Optional
+   workspace: 1  # Optional. This makes it so that Miri is only applied to a single specified workspace.
 ```

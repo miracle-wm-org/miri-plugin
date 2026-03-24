@@ -28,15 +28,17 @@ struct Miri {
     workspaces: HashMap<u64, MiriWorkspaceInfo>,
     inner_gap: i32,
     outer_gap: i32,
+    workspace: Option<u32>
 }
 
 impl Default for Miri {
     fn default() -> Self {
-        let (inner_gap, outer_gap) = Self::load_gaps();
+        let (inner_gap, outer_gap, workspace) = Self::load_config();
         Self {
             workspaces: HashMap::new(),
             inner_gap,
             outer_gap,
+            workspace: if workspace < 0 { None } else { Some(workspace as u32) }
         }
     }
 }
@@ -49,18 +51,19 @@ struct MiriWorkspaceInfo {
 }
 
 impl Miri {
-    fn load_gaps() -> (i32, i32) {
+    fn load_config() -> (i32, i32, i32) {
         let json = match get_userdata_json() {
             Some(j) => j,
-            None => return (DEFAULT_INNER_GAP, DEFAULT_OUTER_GAP),
+            None => return (DEFAULT_INNER_GAP, DEFAULT_OUTER_GAP, -1),
         };
         let v: serde_json::Value = match serde_json::from_str(&json) {
             Ok(v) => v,
-            Err(_) => return (DEFAULT_INNER_GAP, DEFAULT_OUTER_GAP),
+            Err(_) => return (DEFAULT_INNER_GAP, DEFAULT_OUTER_GAP, -1),
         };
         let inner_gap = v["inner_gap"].as_i64().unwrap_or(DEFAULT_INNER_GAP as i64) as i32;
         let outer_gap = v["outer_gap"].as_i64().unwrap_or(DEFAULT_OUTER_GAP as i64) as i32;
-        (inner_gap, outer_gap)
+        let workspace = v["workspace"].as_i64().unwrap_or(-1) as i32;
+        (inner_gap, outer_gap, workspace)
     }
 
     fn effective_area(area: &Rectangle, outer_gap: i32) -> Rectangle {
@@ -155,6 +158,23 @@ impl Miri {
 
 impl Plugin for Miri {
     fn place_new_window(&mut self, info: &WindowInfo) -> Option<Placement> {
+        // Check if the window is going to be placed on the provided workspace. If not,
+        // we will ignore it and place it according to the system.
+        if let Some(required_workspace_num) = self.workspace {
+            if let Some(window_workspace) = info.workspace() {
+                if let Some(num) = window_workspace.number {
+                    if num != required_workspace_num   {
+                        return None;
+                    }
+                } else {
+                    return None;
+                }
+            }
+            else {
+                return None;
+            }
+        }
+
         if info.window_type != WindowType::Normal && info.window_type != WindowType::Freestyle {
             return None;
         }
