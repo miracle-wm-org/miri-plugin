@@ -1,6 +1,8 @@
 # miri-plugin
 A scrolling window manager plugin for miracle-wm
 
+[Video Demo](https://github.com/user-attachments/assets/3233f932-a0e2-4adc-95a5-4eb0836afd9c)
+
 ## Download
 
 The latest nightly WASM build is available on the [releases page](https://github.com/miracle-wm-org/miri-plugin/releases/tag/nightly):
