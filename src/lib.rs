@@ -210,66 +210,7 @@ impl Plugin for Miri {
         let ws = get_active_workspace()?;
         let ws_id = ws.id();
 
-        // Seed the workspace entry with any already-managed windows that belong
-        // to it when:
-        //   (a) the entry doesn't exist yet, OR
-        //   (b) the entry exists but has no windows — this happens when
-        //       workspace_created / workspace_area_changed pre-created an empty
-        //       entry and the compositor then destroyed and recreated the workspace
-        //       with a new ID (dynamic workspaces), deleting the entry that held
-        //       the existing windows.
-        if self
-            .workspaces
-            .get(&ws_id)
-            .map_or(true, |w| w.windows.is_empty())
-        {
-            let managed = managed_windows();
-            let existing: Vec<u64> = managed
-                .iter()
-                .filter(|pw| {
-                    let wi: &WindowInfo = pw;
-                    wi.id() != info.id()
-                        && (wi.window_type == WindowType::Normal
-                            || wi.window_type == WindowType::Freestyle)
-                        && wi.state != WindowState::Attached
-                        && wi.workspace().map_or(false, |w| w.id() == ws_id)
-                })
-                .map(|pw| {
-                    let wi: &WindowInfo = pw;
-                    wi.id()
-                })
-                .collect();
-            // Remove these windows from any stale old-ID workspace entries.
-            for win_id in &existing {
-                for ws_info in self.workspaces.values_mut() {
-                    ws_info.windows.retain(|w| w != win_id);
-                }
-            }
-            let focused = existing.len().saturating_sub(1);
-            // If the entry already existed (case b), preserve viewport_index and
-            // update only the fields that need refreshing.
-            if let Some(ws_info) = self.workspaces.get_mut(&ws_id) {
-                ws_info.windows = existing;
-                ws_info.focused_index = focused;
-                ws_info.area = ws.rectangle.clone();
-            } else {
-                self.workspaces.insert(
-                    ws_id,
-                    MiriWorkspaceInfo {
-                        windows: existing,
-                        focused_index: focused,
-                        viewport_index: 0,
-                        area: ws.rectangle.clone(),
-                    },
-                );
-            }
-        }
-
         let workspace_info = self.workspaces.get_mut(&ws_id).unwrap();
-        // Always refresh the area from the live workspace so that a stale rect
-        // stored by workspace_created (before workspace_area_changed fires) does
-        // not cause the first window to be placed with the wrong size.
-        workspace_info.area = ws.rectangle;
         let new_index = workspace_info.windows.len();
         let viewport_index = workspace_info.viewport_index;
         let rect = Self::rect_for_index(
