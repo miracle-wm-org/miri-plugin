@@ -5,7 +5,7 @@ use miracle_plugin::{
     miracle_plugin,
     placement::{FreestylePlacement, Placement},
     plugin::{Plugin, get_active_workspace, get_userdata_json, managed_windows},
-    window::{DepthLayer, WindowInfo, WindowState, WindowType},
+    window::{DepthLayer, Window, WindowState, WindowType},
     workspace::Workspace,
 };
 use std::collections::HashMap;
@@ -105,7 +105,7 @@ impl Miri {
     }
 
     /// Find which workspace and index a window belongs to.
-    fn find_window(&self, win_info: &WindowInfo) -> Option<(u64, usize)> {
+    fn find_window(&self, win_info: &Window) -> Option<(u64, usize)> {
         for (ws_id, info) in &self.workspaces {
             if let Some(idx) = info.windows.iter().position(|w| *w == win_info.id()) {
                 return Some((*ws_id, idx));
@@ -125,7 +125,7 @@ impl Miri {
         let managed = managed_windows();
         for (index, stored_info) in info.windows.iter().enumerate() {
             if let Some(pw) = managed.iter().find(|pw| {
-                let wi: &WindowInfo = pw;
+                let wi: &Window = pw;
                 wi.id() == *stored_info
             }) {
                 let _ = pw.set_rectangle(
@@ -147,7 +147,7 @@ impl Miri {
         if let Some(info) = self.workspaces.get(&ws_id) {
             if let Some(target) = info.windows.get(index) {
                 if let Some(pw) = managed.iter().find(|pw| {
-                    let wi: &WindowInfo = pw;
+                    let wi: &Window = pw;
                     wi.id() == *target
                 }) {
                     let _ = pw.request_focus();
@@ -194,7 +194,7 @@ impl Miri {
 }
 
 impl Plugin for Miri {
-    fn place_new_window(&mut self, info: &WindowInfo) -> Option<Placement> {
+    fn place_new_window(&mut self, info: &Window) -> Option<Placement> {
         if !self.is_on_required_workspace() {
             return None;
         }
@@ -236,7 +236,7 @@ impl Plugin for Miri {
         }))
     }
 
-    fn window_deleted(&mut self, info: &WindowInfo) {
+    fn window_deleted(&mut self, info: &Window) {
         if let Some((ws_id, idx)) = self.find_window(&info) {
             let ws_info = self.workspaces.get_mut(&ws_id).unwrap();
             ws_info.windows.remove(idx);
@@ -261,7 +261,7 @@ impl Plugin for Miri {
         }
     }
 
-    fn window_focused(&mut self, info: &WindowInfo) {
+    fn window_focused(&mut self, info: &Window) {
         if let Some((ws_id, idx)) = self.find_window(&info) {
             if let Some(ws_info) = self.workspaces.get_mut(&ws_id) {
                 // Always track which window is focused (used by keyboard navigation).
