@@ -3,23 +3,23 @@ A scrolling window manager plugin for miracle-wm
 
 [Video Demo](https://github.com/user-attachments/assets/3233f932-a0e2-4adc-95a5-4eb0836afd9c)
 
-## Download
+## Installation
 
-The latest nightly WASM build is available on the [releases page](https://github.com/miracle-wm-org/miri-plugin/releases/tag/nightly):
+Download and install the latest nightly build:
 
+```sh
+curl -fsSL https://raw.githubusercontent.com/miracle-wm-org/miri-plugin/main/install.sh | bash
 ```
-https://github.com/miracle-wm-org/miri-plugin/releases/download/nightly/miri_plugin.wasm
-```
 
-## Building from Source
+This places `miri_plugin.wasm` in `$XDG_CONFIG_HOME/miracle-wm/plugins` (defaults to `~/.config/miracle-wm/plugins`), which will be automatically loaded by miracle-wm.
 
-### Installation
+## Prerequisites
 ```sh
 sudo apt-get install -y libmircore-dev clang libclang-dev
 rustup target add wasm32-wasip1
 ```
 
-### Building
+## Build
 ```sh
 cargo build --target wasm32-wasip1 --release
 
