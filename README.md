@@ -11,23 +11,8 @@ Download and install the latest nightly build:
 curl -fsSL https://raw.githubusercontent.com/miracle-wm-org/miri-plugin/main/install.sh | bash
 ```
 
-This places `miri_plugin.wasm` in `$XDG_CONFIG_HOME/miracle-wm/plugins` (defaults to `~/.config/miracle-wm/plugins`), which will be automatically loaded by miracle-wm.
+Alternatively, manually add the plugin to your miracle-wm configuration file (`~/.config/miracle-wm/config.yaml`):
 
-## Prerequisites
-```sh
-sudo apt-get install -y libmircore-dev clang libclang-dev
-rustup target add wasm32-wasip1
-```
-
-## Build
-```sh
-cargo build --target wasm32-wasip1 --release
-
-# This will build to:
-#    target/wasm32-wasip1/release/miri_plugin.wasm
-```
-
-## Usage
 ```yaml
 # ~/.config/miracle-wm/config.yaml
 
@@ -37,3 +22,19 @@ plugins:
    outer_gap: 5  # Optional
    workspace: 1  # Optional. This makes it so that Miri is only applied to a single specified workspace.
 ```
+
+### Building
+
+### Prerequisites
+```sh
+sudo apt-get install -y libmircore-dev clang libclang-dev
+rustup target add wasm32-wasip1
+```
+
+### Compilation
+
+```sh
+cargo build --target wasm32-wasip1 --release
+```
+
+The compiled WASM file can be found at `target/wasm32-wasip1/release/miri_plugin.wasm`.
