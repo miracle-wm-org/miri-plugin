@@ -3,6 +3,8 @@ name: Build
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
   build:
@@ -26,6 +28,7 @@ jobs:
         run: cargo build --target wasm32-wasip1 --release
 
       - name: Publish nightly release
+        if: github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: nightly

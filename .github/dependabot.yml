@@ -1,0 +1,15 @@
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: task
+    ignore:
+      # miracle-plugin exposes glam types in its API, so this has to stay on the
+      # glam version that miracle-plugin depends on.
+      - dependency-name: glam
+        update-types:
+          - version-update:semver-major
+          - version-update:semver-minor
